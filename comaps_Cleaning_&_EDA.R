@@ -33,13 +33,15 @@ a = merge(compas,people,by = "person_id")
 
 #Finding distribution of compas score for african-american people
 a_blck = subset(a, a$type_of_assessment == "Risk of Recidivism" & a$race == "African-American" )
-plot(density(a_blck$decile_score.x), lwd = 3, col = "red", xlim = c(0,12), main = "Plot")
+plot(density(a_blck$decile_score.x), lwd = 3, col = "red", xlim = c(0,12), main = "Plot", xlab = "Risk Score", xaxt = 'n')
 par(new = TRUE)
 
 #Finding distribution of compas score for native american and other people
 a_white = subset(a, a$type_of_assessment == "Risk of Recidivism" & a$race != "African-American" )
-plot(density(a_white$decile_score.x), add = TRUE, col = "blue", lwd =3, xlim = c(0,12), main = "Plot")
+plot(density(a_white$decile_score.x), add = TRUE, col = "blue", lwd =3, xlim = c(0,12), main = "Plot", xlab = "Risk Score", yaxt = 'n')
+legend("topright", c("Non-AA-people","AA-people"), fill = c("blue","red"), bg = NULL, box.lty = 0, cex = 0.4)
 
 summary(a_white$race)
 summary(a_blck$race)
 #The plot shows that african american people have more high risk numbers by COMPAS compared to other races.
+
