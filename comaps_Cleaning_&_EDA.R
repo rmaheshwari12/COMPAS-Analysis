@@ -205,6 +205,13 @@ stargazer(m1_recid_no_decile,m1_recid_crime_factors,m1_recid_decilescore,m1_reci
 
 ################################################################################################################
 
+#Running the models to determine the violent recidivism based on all the factors like above:
+
+#Shukla Starts here...
+
+
+################################################################################################################
+
 #Computing a fair score matrix by considering only the crime factors as per the model m0_decile_crime_factors!
 
 m1_recid_crime_factors$coefficients[6]
@@ -227,12 +234,18 @@ c2 <- rgb(255,192,203, max = 255, alpha = 80, names = "lt.pink")
 
 d$scaledmyscore <- ifelse(d$scaledmyscore == 0 ,d$scaledmyscore+1,d$scaledmyscore) 
 summary(d$scaledmyscore)
-hist(d$decile_score, breaks = 10, col = c1, ylim = c(0,6500))
+
+hist(d$decile_score, breaks = 10, col = c1, ylim = c(0,6500),main = NULL)
 hist(d$scaledmyscore,breaks = 10, col = c2, add = TRUE)
+title("Histogram of Comaps-Decile score and My score")
+legend("topright", c("Decile Score", "My Score"), col=c(c1, c2), lwd=10)
+
 
 ggplot(data = d, aes(sort(charge_degree_fact, decreasing = TRUE))) +
-geom_bar(color = 'steelblue') + 
-ggtitle ("Chrage Degree Distribution")
+geom_bar(color = 'red') +
+ggtitle ("Chrage Degree Distribution") + 
+xlab(" Charge Degrees")+
+ylab("Frequency")
 
 #this is fun
 
