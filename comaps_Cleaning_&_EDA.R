@@ -227,8 +227,8 @@ c2 <- rgb(255,192,203, max = 255, alpha = 80, names = "lt.pink")
 
 d$scaledmyscore <- ifelse(d$scaledmyscore == 0 ,d$scaledmyscore+1,d$scaledmyscore) 
 summary(d$scaledmyscore)
-hist(d$decile_score, breaks = 20, col = c1, ylim = c(0,6000))
-hist(d$scaledmyscore,breaks = 20, col = c2, add = TRUE)
+hist(d$decile_score, breaks = 10, col = c1, ylim = c(0,6500))
+hist(d$scaledmyscore,breaks = 10, col = c2, add = TRUE)
 
 ggplot(data = d, aes(sort(charge_degree_fact, decreasing = TRUE))) +
 geom_bar(color = 'steelblue') + 
@@ -240,6 +240,18 @@ summary(d$scaleddecilescore)
 
 
 
-d_africanamerica = subset(d, race == 'African-American', select = c('decile_score','scaleddecilescore'))
-hist(d_africanamerica$scaleddecilescore, col= c2)
-hist(d_africanamerica$decile_score, col = c1, add =  TRUE)
+d_africanamerica = subset(d, race == 'African-American', select = c('decile_score','myscore','scaledmyscore'))
+hist(d_africanamerica$decile_score, col= c2, ylim=c(0,3000))
+hist(d_africanamerica$scaledmyscore, col = c1, add =  TRUE)
+
+dd <- scale(d$decile_score)
+mm <- scale(d$myscore)
+
+summary(dd)
+summary(mm)
+
+
+hist(dd, breaks = 10, col = c1, ylim = c(0,6500))
+hist(mm ,breaks = 10, col = c2, add = TRUE)
+hist(dd)
+hist(mm)
