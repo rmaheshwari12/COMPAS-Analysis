@@ -82,24 +82,24 @@ setwd("C:/USF - BAIS/Anol/Compass Analysis")
 
 d <- read.csv("compas_with_drug_details.csv")
 attach(d)
-detach(d)
+#detach(d)
 summary(d)
 head(d)
 
-#There are some negative values (-1) in decile score, typically indicator of missing data. We will remove this data from the analysis
-d <- filter(d,decile_score != -1 )
-
+#histogram of decile score
 hist(log(d$decile_score),breaks = 8)
 
 #removing unwanted columns:
 
 colnames(d)
-unwanted_cols = c('age_cat','days_b_screening_arrest',"c_jail_in","c_jail_out","c_case_number","c_offense_date","c_arrest_date","c_days_from_compas",
-                  'type_of_assessment', 'v_type_of_assessment','screening_date')
+unwanted_cols = c('id','key','age_cat','dob','r_days_from_arrest','days_b_screening_arrest',"c_jail_in","c_jail_out","c_case_number","c_offense_date","c_arrest_date","c_days_from_compas",'type_of_assessment', 'v_type_of_assessment','screening_date','num_vr_cases','num_r_cases')
 
-d = drop_columns(data = d, ind = c('X','Unnamed..0'))
+d = drop_columns(data = d, ind = unwanted_cols)
 #Relevel the race
 d$race <- relevel(d$race, ref = "Caucasian")
+
+d = subset(d, d$length_of_stay <2000)
+
 
 #Correlation matrix
 cordf = cor(d[,unlist(lapply(d, is.numeric))])
@@ -116,6 +116,7 @@ geom_smooth(method = 'lm', color = 'red')
 ggplot(data = d, aes(decile_score,priors_count)) + 
 geom_point(color = 'steelblue') + 
 ggtitle(" Decile score vs Priors Count") +
+
 geom_smooth(method = 'gam', color = 'red', formula = y ~ s(x, bs = "cs"))
 
 
@@ -123,6 +124,12 @@ plot(d$decile_score,d$age)
 
 
 plot(d$decile_score,d$priors_count)
+
+
+ggplot(data = d, aes(charge_degree_fact)) +
+geom_bar(color = 'steelblue') + 
+ggtitle ("Chrage Degree Distribution")
+
 
 
 pairs(~age+decile_score+race+priors_count+juv_fel_count+juv_misd_count+score_text,data=d,main="Simple Scatterplot Matrix")
@@ -134,22 +141,22 @@ pairs(~age+decile_score+race+priors_count+juv_fel_count+juv_misd_count+score_tex
 #Simple LR model withouth Interaction
 # all variables that might generate decile score i.e. age, juv count, sex and race
 
-m0_decile_all = lm(log(decile_score) ~ age + juv_fel_count + juv_misd_count + as.factor(druginvolvment) + sex + priors_count + race ,d)
+m0_decile_all = lm(log(decile_score) ~ age + juv_fel_count + juv_misd_count + sex + priors_count + race ,d)
 summary(m0_decile_all)
 plot(m0_decile_all)
 
 #Simple LR model with Race and Sex Interaction
 
-m0_decile_all_interaction = lm(log(decile_score) ~ age + juv_fel_count + juv_misd_count + as.factor(druginvolvment) +sex*race + priors_count, d)
+m0_decile_all_interaction = lm(log(decile_score) ~ age + juv_fel_count + juv_misd_count + sex*race + priors_count, d)
 summary(m0_decile_all_interaction)
 plot(m0_decile_all_interaction)
 
 #Checking the effect of crime factors on decile score
-m0_decile_crime_factors = lm(log(decile_score) ~ juv_fel_count + juv_misd_count + priors_count + as.factor(druginvolvment),d) #normality fails
+m0_decile_crime_factors = lm(log(decile_score) ~ juv_fel_count + juv_misd_count + priors_count ,d) #normality fails
 summary(m0_decile_crime_factors)
 plot(m0_decile_crime_factors)
 
-m0_decile_crime_factors_squareterms = lm(log(decile_score) ~ juv_fel_count + juv_misd_count + priors_count + I(priors_count^2) + as.factor(druginvolvment),d)
+m0_decile_crime_factors_squareterms = lm(log(decile_score) ~ juv_fel_count + juv_misd_count + priors_count + I(priors_count^2) ,d)
 summary(m0_decile_crime_factors)
 plot(m0_decile_crime_factors)
 
@@ -170,7 +177,7 @@ d$is_recid <- factor(d$is_recid)
 
 #GLM model to predict recidivism using using all other factors withouth interaction
 
-m1_recid_no_decile = glm(is_recid ~ age + juv_fel_count + juv_misd_count + sex + priors_count + race + as.factor(druginvolvment) + length_of_stay, family =binomial , data = d)
+m1_recid_no_decile = glm(is_recid ~ age + juv_fel_count + juv_misd_count + priors_count +as.factor(druginvolvment) + length_of_stay + sex + race, control = control, family =binomial , data = d)
 summary(m1_recid_no_decile)
 plot(m1_recid_no_decile)
 
@@ -193,32 +200,44 @@ summary(m1_recid_sex_race)
 plot(m1_recid_sex_race)
 
 
-stargazer(m1_recid_no_decile,m1_recid_crime_factors,m1_recid_all,m1_recid_decilescore,m1_recid_sex_race,type = 'text' )
+stargazer(m1_recid_no_decile,m1_recid_crime_factors,m1_recid_decilescore,m1_recid_sex_race,type = 'text' )
 
 
 ################################################################################################################
 
 #Computing a fair score matrix by considering only the crime factors as per the model m0_decile_crime_factors!
 
+m1_recid_crime_factors$coefficients[6]
 
-d$Newdecilescore = exp(0.969811) + exp(0.13694)*d$juv_fel_count + exp(0.11234)*d$juv_misd_count + exp(0.06106)*d$priors_count + exp(0.25013)*d$druginvolvment
+d$myscore = round(exp(m1_recid_crime_factors$coefficients[1]) + exp(m1_recid_crime_factors$coefficients[2])*d$juv_fel_count + exp(m1_recid_crime_factors$coefficients[3])*d$juv_misd_count + exp(m1_recid_crime_factors$coefficients[4])*d$priors_count + exp(m1_recid_crime_factors$coefficients[5])*d$druginvolvment + exp(m1_recid_crime_factors$coefficients[6])*d$length_of_stay)
+summary(d$myscore)
+d$myscore = d$myscore + 2
+#having rounded of values of -1 and 0 ?
+hist(d$myscore, breaks = 10)
 
-summary(d$Newdecilescore)
+d$scaledmyscore = round(rescale(d$myscore,to= c(1,10)))
+summary(d$scaledmyscore)
+hist(d$scaledmyscore)
+
 summary(d$decile_score)
-
-hist(d$decile_score, col = c1)
-hist(d$Newdecilescore, col = c2, add = TRUE)
+hist(d$decile_score, breaks = 10)
 
 c1 <- rgb(173,216,230,max = 255, alpha = 80, names = "lt.blue")
 c2 <- rgb(255,192,203, max = 255, alpha = 80, names = "lt.pink")
 
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-d$scaleddecilescore = scale(d$Newdecilescore)
+d$scaledmyscore <- ifelse(d$scaledmyscore == 0 ,d$scaledmyscore+1,d$scaledmyscore) 
+summary(d$scaledmyscore)
+hist(d$decile_score, breaks = 20, col = c1, ylim = c(0,6000))
+hist(d$scaledmyscore,breaks = 20, col = c2, add = TRUE)
+
+ggplot(data = d, aes(sort(charge_degree_fact, decreasing = TRUE))) +
+geom_bar(color = 'steelblue') + 
+ggtitle ("Chrage Degree Distribution")
+
+#this is fun
+
 summary(d$scaleddecilescore)
 
-
-hist(d$scaleddecilescore, col = c2)
-hist(d$decile_score, col = c1,add = TRUE)
 
 
 d_africanamerica = subset(d, race == 'African-American', select = c('decile_score','scaleddecilescore'))
