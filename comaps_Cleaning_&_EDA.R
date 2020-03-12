@@ -215,7 +215,7 @@ stargazer(m1_recid_no_decile,m1_recid_crime_factors,m1_recid_decilescore,m1_reci
 
 install.packages("caTools")
 library(caTools)
-set.seed(101) 
+set.seed(101)  #srtseed for same set of data sampling 
 train = stratified(d$is_recid, size = .75,seed = 101)
 train = subset(data, sample == TRUE)
 test  = subset(data, sample == FALSE)
