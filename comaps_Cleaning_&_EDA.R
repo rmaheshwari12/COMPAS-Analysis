@@ -108,6 +108,12 @@ corrplot::corrplot(cordf)
 #ScatterPlots
 library(ggplot2)
 
+ggplot(data = d, aes(decile_score)) +
+  geom_bar(aes(fill= d$race)) +
+  ggtitle("Decile Score by Race") +
+  xlab(" Decile Score for Risk of Recividism ") +
+  ylab("Frequency")
+
 ggplot(data = d, aes(decile_score,age)) + 
 geom_point(color = 'steelblue') + 
 ggtitle(" Decile score vs Age") +
