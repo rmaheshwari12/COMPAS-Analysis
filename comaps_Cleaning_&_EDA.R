@@ -39,15 +39,9 @@ d = drop_columns(data = d, ind = unwanted_cols)
 #Data Manipulation
 
 d$race <- relevel(d$race, ref = "Caucasian") #Relevel the race to caucasian
-d$is_recid <- factor(d$is_recid) #factorize the is_recid flag
+d$is_recid <- factor(d$is_recid,) #factorize the is_recid flag
 d$is_violent_recid <- factor(d$is_violent_recid) #factorize is_voilent_recid flag
 d$length_of_stay = d$length_of_stay + 1 #adding 1 to all the records as some preprocessing has computed release on same day as -1 or release day after as 0 and so on. 
-
-boxplot(d$length_of_stay)
-IQR(d$length_of_stay)
-
-d = subset(d, d$length_of_stay <= 500)#removing records where length of stay is greater than 500
-
 
 #Charge Degree_factors
 
@@ -56,7 +50,34 @@ table(d$charge_degree_fact)
 #removing Charge degree F5,F6,F7 as there are only 6 records of them combined in the data and no significance was found online about these charge degrees
 
 d = d[!((d$charge_degree_fact == 'F5') | (d$charge_degree_fact == 'F6') | (d$charge_degree_fact == 'F7')),]
+table(d$charge_degree_fact)
 dim(d)
+
+
+#DATA SPLIT INTO TRAIN TEST
+set.seed(101)
+install.packages("caret")
+library(caret)
+train.index <- createDataPartition(d$is_recid, p = .7, list = FALSE)
+train <- d[ train.index,]
+test  <- d[-train.index,]
+
+
+#balanced sampling
+
+install.packages("ROSE")
+library(ROSE)
+
+data_balanced_over <- ovun.sample(is_recid ~ ., data = train, method = "both", N = 4690)$data
+table(data_balanced_over$is_recid)
+
+boxplot(d$length_of_stay)
+IQR(d$length_of_stay)
+
+d = subset(d, d$length_of_stay <= 500)#removing records where length of stay is greater than 500
+
+
+
 
 
 #Correlation matrix
@@ -183,30 +204,30 @@ library(ModelMetrics)
 library(dplyr)
 
 #model 1 - without decile score
-pred_no_decile = m1_recid_no_decile %>% predict.glm(test,type="response" )
-confusionMatrix(test$is_recid,pred_no_decile,0.5)
+pred_no_decile = m1_recid_no_decile %>% predict.glm(test,type="response") %>% {if_else(.> 0.5 , 1,0)} %>% as.factor(.)
+confusionMatrix(test$is_recid,pred_no_decile)
 rmse(test$is_recid,pred_no_decile)
-f1Score(test$is_recid,pred_no_decile , 0.5)
+f1Score(test$is_recid,pred_no_decile)
 
 #model 2 - only crime factors
-pred_crime_factor = m1_recid_crime_factors %>% predict.glm(test,type="response" )
-confusionMatrix(test$is_recid,pred_crime_factor,0.5)
+pred_crime_factor = m1_recid_crime_factors %>% predict.glm(test,type="response") %>%{if_else(.>0.5,1,0)}%>% as.factor(.)
+confusionMatrix(test$is_recid,pred_crime_factor)
 rmse(test$is_recid,pred_crime_factor)
-f1Score(test$is_recid,pred_crime_factor , 0.5)
+f1Score(test$is_recid,pred_crime_factor)
 
 
 #Model 3 - only decile score
-pred_decile = m1_recid_decilescore %>% predict.glm(test,type="response" )
-confusionMatrix(test$is_recid,pred_decile,0.5)
+pred_decile = m1_recid_decilescore %>% predict.glm(test,type="response") %>% {if_else(.>0.5,1,0)}%>%as.factor(.)
+confusionMatrix(test$is_recid,pred_decile)
 rmse(test$is_recid,pred_decile)
-f1Score(test$is_recid,pred_decile , 0.5)
+f1Score(test$is_recid,pred_decile)
 
 
 #Model 4 - Sex and Race Interaction alone
-pred_sexandRace = m1_recid_sex_race %>% predict.glm(test,type="response" )
-confusionMatrix(test$is_recid,pred_sexandRace,0.5)
+pred_sexandRace = m1_recid_sex_race %>% predict.glm(test,type="response") %>% {if_else(.>0.5,1,0)}%>%as.factor(.)
+confusionMatrix(test$is_recid,pred_sexandRace)
 rmse(test$is_recid,pred_sexandRace)
-f1Score(test$is_recid,pred_sexandRace , 0.5)
+f1Score(test$is_recid,pred_sexandRace,)
 
 
 ################################################################################################################
@@ -215,25 +236,35 @@ f1Score(test$is_recid,pred_sexandRace , 0.5)
 
 #GLM model to predict Voilent recidivism using using all other factors withouth interaction
 
-m1_Vrecid_no_decile = glm(is_violent_recid ~ age + juv_fel_count + juv_misd_count + priors_count +as.factor(druginvolvment) + length_of_stay + sex + race+charge_degree_fact, family =binomial , data = train)
+set.seed(101)
+install.packages("caret")
+library(caret)
+
+
+train.index <- createDataPartition(d$is_violent_recid, p = .7, list = FALSE)
+Vtrain <- d[ train.index,]
+Vtest  <- d[-train.index,]
+
+
+m1_Vrecid_no_decile = glm(is_violent_recid ~ age + juv_fel_count + juv_misd_count + priors_count +as.factor(druginvolvment) + length_of_stay + sex + race+charge_degree_fact, family =binomial , data = Vtrain)
 summary(m1_recid_no_decile)
 plot(m1_recid_no_decile)
 
 
 #GLM model to predict recidivism using all the crime related factors 
-m1_Vrecid_crime_factors = glm(is_recid ~ juv_fel_count + juv_misd_count + priors_count + as.factor(druginvolvment) + length_of_stay+ charge_degree_fact, family =binomial , data = train)
+m1_Vrecid_crime_factors = glm(is_violent_recid ~ juv_fel_count + juv_misd_count + priors_count + as.factor(druginvolvment) + length_of_stay+ charge_degree_fact, family =binomial , data = Vtrain)
 summary(m1_recid_crime_factors)
 plot(m1_recid_crime_factors)
 
 
 #GLM model to predict the using decile score as predictor of recidivism
-m1_Vrecid_decilescore = glm(is_recid ~ decile_score, family =binomial , data = train)
+m1_Vrecid_decilescore = glm(is_violent_recid ~ decile_score, family =binomial , data = Vtrain)
 summary(m1_recid_decilescore)
 plot(m1_recid_decilescore)
 
 
 #using race and sex alone as a predictor of recidivism
-m1_Vrecid_sex_race = glm(is_recid ~ sex*race, family =binomial , data = train)
+m1_Vrecid_sex_race = glm(is_violent_recid ~ sex*race, family =binomial , data = Vtrain)
 summary(m1_recid_sex_race)
 plot(m1_recid_sex_race)
 
@@ -241,10 +272,31 @@ library(stargazer)
 stargazer(m1_Vrecid_no_decile,m1_Vrecid_crime_factors,m1_Vrecid_decilescore,m1_Vrecid_sex_race,type = 'text' )
 
 
+#model 1 - without decile score
+Vpred_no_decile = m1_Vrecid_no_decile %>% predict.glm(Vtest,type="response") %>% {if_else(.>0.5,1,0)} %>% as.factor(.)
+confusionMatrix(Vtest$is_violent_recid,Vpred_no_decile)
+rmse(Vtest$is_violent_recid,Vpred_no_decile)
+f1Score(Vtest$is_violent_recid,Vpred_no_decile)
+
+#model 2 - only crime factors
+Vpred_crime_factor = m1_Vrecid_crime_factors %>% predict.glm(Vtest,type="response" ) %>% {if_else(.>0.5,1,0)} %>% as.factor(.)
+confusionMatrix(Vtest$is_violent_recid,Vpred_crime_factor)
+rmse(Vtest$is_violent_recid,Vpred_crime_factor)
+f1Score(Vtest$is_violent_recid,Vpred_crime_factor)
 
 
+#Model 3 - only decile score
+Vpred_decile = m1_Vrecid_decilescore %>% predict.glm(Vtest,type="response" ) %>% {if_else(.>0.5,1,0)} %>% as.factor(.)
+confusionMatrix(Vtest$is_violent_recid,Vpred_decile)
+rmse(Vtest$is_violent_recid,Vpred_decile)
+f1Score(Vtest$is_violent_recid,Vpred_decile)
 
 
+#Model 4 - Sex and Race Interaction alone
+Vpred_sexandRace = m1_Vrecid_sex_race %>% predict.glm(Vtest,type="response" ) %>% {if_else(.>0.5,1,0)} %>% as.factor(.)
+confusionMatrix(Vtest$is_recid,Vpred_sexandRace)
+rmse(Vtest$is_violent_recid,Vpred_sexandRace)
+f1Score(Vtest$is_violent_recid,Vpred_sexandRace)
 
 
 
