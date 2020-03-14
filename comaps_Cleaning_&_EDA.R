@@ -11,69 +11,6 @@ library(lattice)
 library(scales)
 library(dplyr)
 
-setwd("E:/Anol/Compass Analysis/COMPAS-Analysis")
-
-filename <- "compas.db"
-sqlite.driver <- dbDriver("SQLite")
-db <- dbConnect(sqlite.driver,
-                dbname = "compas.db")
-
-dbListTables(db)
-
-compas <- dbReadTable(db,"compas")
-people <- dbReadTable(db,"people")
-charge <- dbReadTable(db,"charge")
-prisonhistory <- dbReadTable(db,"prisonhistory")
-jailhistory <- dbReadTable(db,"jailhistory")
-casearrest <- dbReadTable(db,"casearrest")
-summary <- dbReadTable(db,"summary")
-
-#Small comment
-
-#EDA
-
-install.packages("DataExplorer") 
-library(DataExplorer)
-
-
-str(compas)
-str(people)
-people$sex <- as.factor(people$sex)
-people$sex <- relevel(x = people$sex,ref = "Male")
-
-#Merging the people and compas data set to include 'race' column in the comaps score
-a = merge(compas,people,by = "person_id") 
-
-#Finding distribution of compas score for african-american people
-a_blck = subset(a, a$type_of_assessment == "Risk of Recidivism" & a$race == "African-American" )
-plot(density(a_blck$decile_score.x), lwd = 3, col = "red", xlim = c(0,12), main = "Plot")
-par(new = TRUE)
-
-#Finding distribution of compas score for native american and other people
-a_white = subset(a, a$type_of_assessment == "Risk of Recidivism" & a$race != "African-American" )
-plot(density(a_white$decile_score.x), add = TRUE, col = "blue", lwd =3, xlim = c(0,12), main = "Plot")
-
-summary(a_white$race)
-summary(a_blck$race)
-#The plot shows that african american people have more high risk numbers by COMPAS compared to other races.
-
-#Replicating Compass Analysis
-setwd("F:/Anol/Rdata_CompasDB")
-library(rio)
-compas = import("Compas.Rdata")
-prisonhistory = import("prisonhistory.Rdata")
-people = import("people.Rdata")
-charge = import("charge.Rdata")
-jailhistory = import("jailhistory.Rdata")
-casearrest = import("casearrest.Rdata")
-
-
-write.csv(compas,"Compas_data.csv")
-write.csv(prisonhistory,"prisonhistory_data.csv")
-write.csv(people,"people_data.csv")
-write.csv(charge,"charge_data.csv")
-write.csv(jailhistory,"jailhistory_data.csv")
-write.csv(casearrest,"casearrest_data.csv")
 
 
 #Linear Regression for the Compass Decile score prediction
@@ -212,132 +149,99 @@ test  <- d[-train.index,]
 
 #GLM model to predict recidivism using using all other factors withouth interaction
 
-m1_recid_no_decile = glm(is_recid ~ age + juv_fel_count + juv_misd_count + priors_count +as.factor(druginvolvment) + length_of_stay + sex + race, control = control, family =binomial , data = d)
+m1_recid_no_decile = glm(is_recid ~ age + juv_fel_count + juv_misd_count + priors_count +as.factor(druginvolvment) + length_of_stay + sex + race, family =binomial , data = train)
 summary(m1_recid_no_decile)
 plot(m1_recid_no_decile)
 
 #------------------------------
 
 #GLM model to predict recidivism using all the crime related factors 
-m1_recid_crime_factors = glm(is_recid ~ juv_fel_count + juv_misd_count + priors_count + as.factor(druginvolvment) + length_of_stay, family =binomial , data = d)
+m1_recid_crime_factors = glm(is_recid ~ juv_fel_count + juv_misd_count + priors_count + as.factor(druginvolvment) + length_of_stay, family =binomial , data = train)
 summary(m1_recid_crime_factors)
 plot(m1_recid_crime_factors)
 
 #------------------------------
 
 #GLM mode using decile score alone as predictor of recidivism
-m1_recid_decilescore = glm(is_recid ~ decile_score, family =binomial , data = d)
+m1_recid_decilescore = glm(is_recid ~ decile_score, family =binomial , data = train)
 summary(m1_recid_decilescore)
 plot(m1_recid_decilescore)
 
 #------------------------------
 
 #GLM model using race and sex alone as a predictor of recidivism
-m1_recid_sex_race = glm(is_recid ~ sex*race, family =binomial , data = d)
+m1_recid_sex_race = glm(is_recid ~ sex*race, family =binomial , data = train)
 summary(m1_recid_sex_race)
 plot(m1_recid_sex_race)
 
 #------------------------------
+library(stargazer)
+stargazer(m1_recid_no_decile,m1_recid_crime_factors,m1_recid_decilescore,m1_recid_sex_race,type = 'text')
 
-stargazer(m1_recid_no_decile,m1_recid_crime_factors,m1_recid_decilescore,m1_recid_sex_race,type = 'text' )
+install.packages("ModelMetrics")
+library(ModelMetrics)
+library(dplyr)
+
+#model 1 - without decile score
+pred_no_decile = m1_recid_no_decile %>% predict.glm(test,type="response" )
+confusionMatrix(test$is_recid,pred_no_decile,0.5)
+rmse(test$is_recid,pred_no_decile)
+f1Score(test$is_recid,pred_no_decile , 0.5)
+
+#model 2 - only crime factors
+pred_crime_factor = m1_recid_crime_factors %>% predict.glm(test,type="response" )
+confusionMatrix(test$is_recid,pred_crime_factor,0.5)
+rmse(test$is_recid,pred_crime_factor)
+f1Score(test$is_recid,pred_crime_factor , 0.5)
 
 
-#RMSE
-pred1 =m1_recid_no_decile %>% predict(test)
-rmse(test$is_recid,pred)
+#Model 3 - only decile score
+pred_decile = m1_recid_decilescore %>% predict.glm(test,type="response" )
+confusionMatrix(test$is_recid,pred_decile,0.5)
+rmse(test$is_recid,pred_decile)
+f1Score(test$is_recid,pred_decile , 0.5)
 
-pred2 =m1_recid_crime_factors %>% predict(test)
-rmse(test$is_recid,pred)
 
-pred3 =m1_recid_decilescore %>% predict(test)
-rmse(test$is_recid,pred)
-
-pred4 =m1_recid_sex_race %>% predict(test)
-rmse(test$is_recid,pred)
-
-plot(test$is_recid,pred, xlab="Actual", ylab = "Predicted") +abline(0,1,col="red")
-
-actuals.pred = data.frame(cbind(actuals=test$is_recid, predicted=pred1)) 
-head(actuals.pred)
-library(corrplot)
-cor.values=as.matrix(cor(actuals.pred))
-print(cor.values)
-corrplot(cor.values, method="circle", type="upper")
-#tail(pred1)
-#head(test$is_recid)
-
+#Model 4 - Sex and Race Interaction alone
+pred_sexandRace = m1_recid_sex_race %>% predict.glm(test,type="response" )
+confusionMatrix(test$is_recid,pred_sexandRace,0.5)
+rmse(test$is_recid,pred_sexandRace)
+f1Score(test$is_recid,pred_sexandRace , 0.5)
 
 
 ################################################################################################################
 
 #Running the models to determine the violent recidivism based on all the factors like above:
 
-#Shukla Starts here...
+#GLM model to predict Voilent recidivism using using all other factors withouth interaction
 
-hist(d$is_recid)
-set.seed(101)
-
-install.packages("caret")
-library(caret)
-train.index <- createDataPartition(d$is_recid, p = .7, list = FALSE)
-train <- d[ train.index,]
-test  <- d[-train.index,]
-#++++++++++++++
-
-#checking if Decile score is a good predictor of Recidivism
-
-
-
-#GLM model to predict recidivism using using all other factors withouth interaction
-
-m1_recid_no_decile = glm(is_recid ~ age + juv_fel_count + juv_misd_count + priors_count +as.factor(druginvolvment) + length_of_stay + sex + race+charge_degree_fact, family =binomial , data = train)
+m1_Vrecid_no_decile = glm(is_violent_recid ~ age + juv_fel_count + juv_misd_count + priors_count +as.factor(druginvolvment) + length_of_stay + sex + race+charge_degree_fact, family =binomial , data = train)
 summary(m1_recid_no_decile)
 plot(m1_recid_no_decile)
 
 
 #GLM model to predict recidivism using all the crime related factors 
-m1_recid_crime_factors = glm(is_recid ~ juv_fel_count + juv_misd_count + priors_count + as.factor(druginvolvment) + length_of_stay+ charge_degree_fact, family =binomial , data = train)
+m1_Vrecid_crime_factors = glm(is_recid ~ juv_fel_count + juv_misd_count + priors_count + as.factor(druginvolvment) + length_of_stay+ charge_degree_fact, family =binomial , data = train)
 summary(m1_recid_crime_factors)
 plot(m1_recid_crime_factors)
 
 
 #GLM model to predict the using decile score as predictor of recidivism
-m1_recid_decilescore = glm(is_recid ~ decile_score, family =binomial , data = train)
+m1_Vrecid_decilescore = glm(is_recid ~ decile_score, family =binomial , data = train)
 summary(m1_recid_decilescore)
 plot(m1_recid_decilescore)
 
 
 #using race and sex alone as a predictor of recidivism
-m1_recid_sex_race = glm(is_recid ~ sex*race, family =binomial , data = train)
+m1_Vrecid_sex_race = glm(is_recid ~ sex*race, family =binomial , data = train)
 summary(m1_recid_sex_race)
 plot(m1_recid_sex_race)
 
+library(stargazer)
+stargazer(m1_Vrecid_no_decile,m1_Vrecid_crime_factors,m1_Vrecid_decilescore,m1_Vrecid_sex_race,type = 'text' )
 
-stargazer(m1_recid_no_decile,m1_recid_crime_factors,m1_recid_decilescore,m1_recid_sex_race,type = 'text' )
 
-#RMSE
-pred =m1_recid_no_decile %>% predict(test)
-rmse(test$is_recid,pred)
 
-pred =m1_recid_crime_factors %>% predict(test)
-rmse(test$is_recid,pred)
-
-pred =m1_recid_decilescore %>% predict(test)
-rmse(test$is_recid,pred)
-
-pred =m1_recid_sex_race %>% predict(test)
-rmse(test$is_recid,pred)
-
-plot(test$is_recid,pred, xlab="Actual", ylab = "Predicted") +abline(0,1,col="red")
-
-actuals.pred = data.frame(cbind(actuals=test$is_recid, predicted=pred)) 
-head(actuals.pred)
-library(corrplot)
-cor.values=as.matrix(cor(actuals.pred))
-print(cor.values)
-corrplot(cor.values, method="circle", type="upper")
-#tail(pred1)
-#head(test$is_recid)
 
 
 
@@ -347,10 +251,8 @@ corrplot(cor.values, method="circle", type="upper")
 ################################################################################################################
 
 
-
 #Computing a fair score matrix by considering only the crime factors as per the model m0_decile_crime_factors!
 
-m1_recid_crime_factors$coefficients[6]
 
 d$myscore = round(exp(m1_recid_crime_factors$coefficients[1]) + exp(m1_recid_crime_factors$coefficients[2])*d$juv_fel_count + exp(m1_recid_crime_factors$coefficients[3])*d$juv_misd_count + exp(m1_recid_crime_factors$coefficients[4])*d$priors_count + exp(m1_recid_crime_factors$coefficients[5])*d$druginvolvment + exp(m1_recid_crime_factors$coefficients[6])*d$length_of_stay)
 summary(d$myscore)
