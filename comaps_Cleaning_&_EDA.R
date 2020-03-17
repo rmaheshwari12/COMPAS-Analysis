@@ -356,7 +356,54 @@ legend("topright", c("Decile Score", "My Score"), col=c(c1, c2), lwd=10)
 
 
 d_africanamerica = subset(d, race == 'African-American', select = c('decile_score','myscore','scaledmyscore'))
-hist(d_africanamerica$decile_score, col= c2, ylim=c(0,3000))
+hist(d_africanamerica$decile_score, col= c2, ylim=c(0,3000), main = NULL)
 hist(d_africanamerica$scaledmyscore, col = c1, add =  TRUE)
+title(" Comparing decile scores for african-american race population ")
+legend("topright", c("My Score", "Decile Score"), col=c(c1, c2), lwd=10)
 
-#
+##########################################################################################################
+
+#Checking the records where decile score is same as my score
+
+table(d$decile_score, d$scaledmyscore)
+
+d$same_score  = if_else(d$decile_score == d$scaledmyscore,"Yes","No")
+table(d$same_score)
+
+#so only records where decile score is 1,2,3 (i.e. low score) is matching with My_score since my score is very skewed towards lower scores.
+
+#Checking percent difference in decile score and my score
+
+d$score_diff_percent = (d$decile_score - d$scaledmyscore / d$decile_score)*100
+summary(d$score_diff_percent)
+
+
+#Checking if the new scaled my score is a good predictor of recidivism
+
+myscore_train.index = caret::createDataPartition(d$is_recid, p = 0.7, list = FALSE)
+myscore_train = d[myscore_train.index,]
+myscore_test = d[-myscore_train.index,]
+
+table(myscore_test$is_recid)
+#GLM to test the myscore against recidivism
+
+myscore_recid = glm(is_recid ~ scaledmyscore, family = binomial, data = myscore_train)
+summary(myscore_recid)
+
+pred_myscore_recid = myscore_recid %>% predict.glm(myscore_test,type="response") %>% {if_else(.>0.3,1,0)} %>% as.factor(.) #since min probability is 0.2078 (calculated using summary before converting into factor)
+confusionMatrix(myscore_test$is_recid,pred_myscore_recid)
+rmse(myscore_test$is_recid,pred_myscore_recid)
+f1Score(myscore_test$is_recid,pred_myscore_recid)
+roc.curve(myscore_test$is_recid,pred_myscore_recid)
+ModelMetrics::precision(myscore_test$is_recid,pred_myscore_recid)
+ModelMetrics::recall(myscore_test$is_recid,pred_myscore_recid)
+
+table(myscore_test$is_recid)
+
+#with myscore we are able to classifiy all the recidivist correctly however the False Negative (False classified as Recidivist) Numbers are too high
+
+#I guess the my score is being affected by the outlier values in variable 'length of stay'
+summary(d$length_of_stay)
+summary(myscore_train$length_of_stay)
+
+#How do we scale it ? do we use log transform ? or we remove outliers by finding IQR ?
