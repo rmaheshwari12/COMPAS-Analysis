@@ -71,10 +71,10 @@ library(ROSE)
 data_balanced_over <- ovun.sample(is_recid ~ ., data = train, method = "both", N = 4690)$data
 table(data_balanced_over$is_recid)
 
-boxplot(d$length_of_stay)
+boxplot(data_balanced_over$length_of_stay)
 IQR(d$length_of_stay)
 
-d = subset(d, d$length_of_stay <= 500)#removing records where length of stay is greater than 500
+#d = subset(d, d$length_of_stay <= 500)#removing records where length of stay is greater than 500
 
 
 
@@ -159,39 +159,39 @@ stargazer(m0_decile_all,m0_decile_all_interaction,m0_decile_crime_factors,m0_dec
 
 #checking if Decile score is a good predictor of Recidivism
 
-set.seed(101)
-install.packages("caret")
-library(caret)
-train.index <- createDataPartition(d$is_recid, p = .7, list = FALSE)
-train <- d[ train.index,]
-test  <- d[-train.index,]
+# set.seed(101)
+# install.packages("caret")
+# library(caret)
+# train.index <- createDataPartition(d$is_recid, p = .7, list = FALSE)
+# train <- d[ train.index,]
+# test  <- d[-train.index,]
 
 
 
 #GLM model to predict recidivism using using all other factors withouth interaction
 
-m1_recid_no_decile = glm(is_recid ~ age + juv_fel_count + juv_misd_count + priors_count +as.factor(druginvolvment) + length_of_stay + sex + race, family =binomial , data = train)
+m1_recid_no_decile = glm(is_recid ~ age + juv_fel_count + juv_misd_count + priors_count +as.factor(druginvolvment) + length_of_stay + sex + race, family =binomial , data = data_balanced_over)
 summary(m1_recid_no_decile)
 plot(m1_recid_no_decile)
 
 #------------------------------
 
 #GLM model to predict recidivism using all the crime related factors 
-m1_recid_crime_factors = glm(is_recid ~ juv_fel_count + juv_misd_count + priors_count + as.factor(druginvolvment) + length_of_stay, family =binomial , data = train)
+m1_recid_crime_factors = glm(is_recid ~ juv_fel_count + juv_misd_count + priors_count + as.factor(druginvolvment) + length_of_stay, family =binomial , data = data_balanced_over)
 summary(m1_recid_crime_factors)
 plot(m1_recid_crime_factors)
 
 #------------------------------
 
 #GLM mode using decile score alone as predictor of recidivism
-m1_recid_decilescore = glm(is_recid ~ decile_score, family =binomial , data = train)
+m1_recid_decilescore = glm(is_recid ~ decile_score, family =binomial , data = data_balanced_over)
 summary(m1_recid_decilescore)
 plot(m1_recid_decilescore)
 
 #------------------------------
 
 #GLM model using race and sex alone as a predictor of recidivism
-m1_recid_sex_race = glm(is_recid ~ sex*race, family =binomial , data = train)
+m1_recid_sex_race = glm(is_recid ~ sex*race, family =binomial , data = data_balanced_over)
 summary(m1_recid_sex_race)
 plot(m1_recid_sex_race)
 
@@ -202,6 +202,8 @@ stargazer(m1_recid_no_decile,m1_recid_crime_factors,m1_recid_decilescore,m1_reci
 install.packages("ModelMetrics")
 library(ModelMetrics)
 library(dplyr)
+
+
 
 #model 1 - without decile score
 pred_no_decile = m1_recid_no_decile %>% predict.glm(test,type="response") %>% {if_else(.> 0.5 , 1,0)} %>% as.factor(.)
