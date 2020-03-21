@@ -17,5 +17,9 @@ The graph below shows how the African-American criminals are provided with highe
 The COMPAS provides a specific score, *'Decile Score'* which is used for identifying the *'Risk of Recidivism'* i.e. how likely an offender is going to commit a crime again within a span of 2 years. I wanted to:
 
 1. Check if at all *Decile Score* is a good predictor for *Recidivism* or not. Also since the Decile Score distribution is biased
-2. Based on some liuterature review and available data derived a 'True Decile Score'  based on taking into account just the past criminal history and current charges on an offender and found out the degree of bias in it compared to 'Biased Decile Score' 
+
+
+2. Based on some liuterature review and available data, derived a 'True Decile Score' (I call it MyScore) just taking into account
+
+0the past criminal history and current charges on an offender and found out the degree of bias in it compared to 'Biased Decile Score' 
 
