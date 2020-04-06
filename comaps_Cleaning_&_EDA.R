@@ -19,10 +19,10 @@ setwd("C:/USF - BAIS/Anol/Compass Analysis")
 
 d <- read.csv("compas_with_drug_details.csv")
 attach(d)
-#detach(d)
-summary(d)
-head(d)
+
 dim(d)
+head(d)
+summary(d)
 
 #histogram of decile score
 hist(log(d$decile_score),breaks = 8)
@@ -44,11 +44,10 @@ d$is_violent_recid <- factor(d$is_violent_recid) #factorize is_voilent_recid fla
 d$druginvolvment <- factor(d$druginvolvment) #factorize drug involvment flag, 0 = NO , 1 = Yes
 d$length_of_stay = d$length_of_stay + 1 #adding 1 to all the records as some preprocessing has computed release on same day as -1 or release day after as 0 and so on. 
 
-#Charge Degree_factors
-
+#Charge Degree_factors correction
 table(d$charge_degree_fact)
-#removing Charge degree F5,F6,F7 as there are only 6 records of them combined in the data and no significance was found online about these charge degrees
 
+#removing Charge degree F5,F6,F7 as there are only 6 records of them combined in the data and no significance was found online about these charge degrees
 d = d[!((d$charge_degree_fact == 'F5') | (d$charge_degree_fact == 'F6') | (d$charge_degree_fact == 'F7')),]
 table(d$charge_degree_fact)
 dim(d)
@@ -58,31 +57,28 @@ dim(d)
 set.seed(101)
 #install.packages("caret")
 #library(caret)
-train.index <- createDataPartition(d$is_recid, p = .7, list = FALSE)
+train.index <- caret::createDataPartition(d$is_recid, p = .7, list = FALSE)
 train <- d[ train.index,]
 test  <- d[-train.index,]
 
-table(train$is_recid)
-table(train$druginvolvment)
-table(test$is_recid)
-table(test$druginvolvment)
+table(train$is_recid,train$druginvolvment)
+table(test$is_recid, test$druginvolvment)
+
 #balanced sampling
 
-install.packages("ROSE")
-library(ROSE)
+# install.packages("ROSE")
+# library(ROSE)
+# 
+# train_data_balanced <- ovun.sample(is_recid ~.,data = train,method = "over")$data
+# train_data_balanced = na.omit(train_data_balanced)
+# table(train_data_balanced$is_recid)
 
-train_data_balanced <- ovun.sample(is_recid ~.,data = train,method = "over")$data
-train_data_balanced = na.omit(train_data_balanced)
-table(train_data_balanced$is_recid)
-
-
-boxplot(train_data_balanced$length_of_stay)
-IQR(train_data_balanced$length_of_stay)
+hist(log(train$length_of_stay))
+summary(train$length_of_stay)
+boxplot(train$length_of_stay)
+IQR(train$length_of_stay)
 
 #d = subset(d, d$length_of_stay <= 500)#removing records where length of stay is greater than 500
-
-
-
 
 
 #Correlation matrix
@@ -93,10 +89,10 @@ corrplot::corrplot(cordf)
 library(ggplot2)
 
 ggplot(data = d, aes(decile_score)) +
-  geom_bar(aes(fill= d$race)) +
-  ggtitle("Decile Score by Race") +
-  xlab(" Decile Score for Risk of Recividism ") +
-  ylab("Frequency")
+geom_bar(aes(fill= d$race)) +
+ggtitle("Decile Score by Race") +
+xlab(" Decile Score for Risk of Recividism ") +
+ylab("Frequency")
 
 ggplot(data = d, aes(decile_score,age)) + 
 geom_point(color = 'steelblue') + 
@@ -131,26 +127,24 @@ pairs(~age+decile_score+race+priors_count+juv_fel_count+juv_misd_count+score_tex
 #Simple LR model withouth Interaction
 # all variables that might generate decile score i.e. age, juv count, sex and race
 
-m0_decile_all = lm(log(decile_score) ~ age + juv_fel_count + juv_misd_count + sex + priors_count + race ,d)
+m0_decile_all = lm(log(decile_score) ~ age + juv_fel_count + juv_misd_count + sex + priors_count + race + charge_degree_fact,d)
 summary(m0_decile_all)
 plot(m0_decile_all)
 #-------------------------------
 
 #Simple LR model with Race and Sex Interaction
 
-m0_decile_all_interaction = lm(log(decile_score) ~ age + juv_fel_count + juv_misd_count + sex*race + priors_count, d)
+m0_decile_all_interaction = lm(log(decile_score) ~ age + juv_fel_count + juv_misd_count + sex*race + priors_count + charge_degree_fact, d)
 summary(m0_decile_all_interaction)
 plot(m0_decile_all_interaction)
 #-------------------------------
 
 #Checking the effect of crime factors on decile score
-m0_decile_crime_factors = lm(log(decile_score) ~ juv_fel_count + juv_misd_count + priors_count ,d) #normality fails
+m0_decile_crime_factors = lm(log(decile_score) ~ juv_fel_count + juv_misd_count + priors_count + charge_degree_fact,d) #normality fails
 summary(m0_decile_crime_factors)
 plot(m0_decile_crime_factors)
 
-m0_decile_crime_factors_squareterms = lm(log(decile_score) ~ juv_fel_count + juv_misd_count + priors_count + I(priors_count^2) ,d)
-summary(m0_decile_crime_factors)
-plot(m0_decile_crime_factors)
+car::vif(m0_decile_crime_factors)
 
 #------------------------------
 
@@ -161,48 +155,53 @@ plot(m0_decile_raceandsex)
 
 stargazer(m0_decile_all,m0_decile_all_interaction,m0_decile_crime_factors,m0_decile_raceandsex,type = 'text')
 
+
+f1score <- function(x1,x2) {
+ f1scorenum = 2*x1*x2/(x1+x2)
+ return(f1scorenum)
+}
 #################################################################################################################3
 
 #############################
 # Predicting the Recidivism #
 #############################
 
-
-#checking if Decile score is a good predictor of Recidivism
-
-# set.seed(101)
-# install.packages("caret")
-# library(caret)
-# train.index <- createDataPartition(d$is_recid, p = .7, list = FALSE)
-# train <- d[ train.index,]
-# test  <- d[-train.index,]
-# table(d$is_recid)
-
-#############################
-
 #install.packages("ModelMetrics")
 library(dplyr)
 library(ModelMetrics)
+library(caret)
+library(pROC)
+install.packages("plotROC")
+library(plotROC)
+install.packages("ROCR")
+library(ROCR)
 
 #GLM model to predict recidivism using using all other factors withouth interaction
 
-m1_recid_no_decile = glm(is_recid ~ age + juv_fel_count + juv_misd_count + priors_count + length_of_stay + druginvolvment + sex + race, family =binomial , data = train)
+m1_recid_no_decile = glm(is_recid ~ age + juv_fel_count + juv_misd_count + priors_count + as.factor(druginvolvment) + sex + race + charge_degree_fact, family =binomial , data = train)
 summary(m1_recid_no_decile)
 plot(m1_recid_no_decile)
 
 
+table(train$is_recid)
+predict(m1_recid_no_decile,test$is_recid)
+
+test$charge_degree_fact = factor(test$charge_degree_fact)
 #Evaluation matrix - m1_recid_no_decile
 pred_no_decile = m1_recid_no_decile %>% predict.glm(test,type="response") %>% {if_else(.> 0.5 , 1,0)} %>% as.factor(.)
-ModelMetrics::confusionMatrix(test$is_recid,pred_no_decile)
-rmse(test$is_recid,pred_no_decile)
-f1Score(test$is_recid,pred_no_decile)
-roc.curve(test$is_recid,pred_no_decile)
-
+caret::confusionMatrix(test$is_recid,pred_no_decile)
+x3 = caret::precision(test$is_recid,pred_no_decile,)
+x4 = caret::recall(test$is_recid,pred_no_decile)
+f1score(x3,x4)
+ModelMetrics::rmse(test$is_recid,pred_no_decile)
+plot(roc(as.numeric(test$is_recid),as.numeric(pred_no_decile)))
+ModelMetrics::auc()
+# F1_Score(y_pred = pred_no_decile, y_true = test$is_recid, positive = "0")
 
 #------------------------------
 
 #GLM model to predict recidivism using all the crime related factors 
-m1_recid_crime_factors = glm(is_recid ~ juv_fel_count + juv_misd_count + priors_count + as.factor(druginvolvment) + length_of_stay, family =binomial , data = train)
+m1_recid_crime_factors = glm(is_recid ~ juv_fel_count + juv_misd_count + priors_count + as.factor(druginvolvment) + charge_degree_fact, family =binomial , data = train)
 summary(m1_recid_crime_factors)
 plot(m1_recid_crime_factors)
 
@@ -330,7 +329,7 @@ stargazer(m1_Vrecid_no_decile,m1_Vrecid_crime_factors,m1_Vrecid_decilescore,m1_V
 #Computing a fair score matrix by considering only the crime factors as per the model m0_decile_crime_factors!
 
 
-d$myscore = round(exp(m1_recid_crime_factors$coefficients[1]) + exp(m1_recid_crime_factors$coefficients[2])*d$juv_fel_count + exp(m1_recid_crime_factors$coefficients[3])*d$juv_misd_count + exp(m1_recid_crime_factors$coefficients[4])*d$priors_count + exp(m1_recid_crime_factors$coefficients[5])*as.numeric(d$druginvolvment) + exp(m1_recid_crime_factors$coefficients[6])*d$length_of_stay)
+d$myscore = round(exp(m0_decile_crime_factors$coefficients[1]) + exp(m0_decile_crime_factors$coefficients[2])*d$juv_fel_count + exp(m0_decile_crime_factors$coefficients[3])*d$juv_misd_count + exp(m0_decile_crime_factors$coefficients[4])*d$priors_count + exo(m0_decile_crime_factors$coefficients[5]*d$charge_degree_fact ... #and so on)
 summary(d$myscore)
 #d$myscore = d$myscore + 2
 #having rounded of values of -1 and 0 ?
@@ -341,7 +340,7 @@ summary(d$scaledmyscore)
 hist(d$scaledmyscore)
 
 summary(d$decile_score)
-hist(d$decile_score, breaks = 10)
+hist(log(d$decile_score), breaks = 10)
 
 c1 <- rgb(173,216,230,max = 255, alpha = 80, names = "lt.blue")
 c2 <- rgb(255,192,203, max = 255, alpha = 80, names = "lt.pink")
@@ -388,10 +387,12 @@ table(myscore_test$is_recid)
 #GLM to test the myscore against recidivism
 
 myscore_recid = glm(is_recid ~ scaledmyscore, family = binomial, data = myscore_train)
-summary(myscore_recid)
+decile_recid = glm(is_recid ~ decile_score, family = binomial, data = myscore_train)
 
-pred_myscore_recid = myscore_recid %>% predict.glm(myscore_test,type="response") %>% {if_else(.>0.3,1,0)} %>% as.factor(.) #since min probability is 0.2078 (calculated using summary before converting into factor)
-confusionMatrix(myscore_test$is_recid,pred_myscore_recid)
+stargazer(myscore_recid,decile_recid, type = "text")
+
+pred_myscore_recid = myscore_recid %>% predict.glm(myscore_test,type="response") %>% {if_else(.>0.5,1,0)} %>% as.factor(.) #since min probability is 0.2078 (calculated using summary before converting into factor)
+ModelMetrics::confusionMatrix(myscore_test$is_recid,pred_myscore_recid, 0.5)
 rmse(myscore_test$is_recid,pred_myscore_recid)
 f1Score(myscore_test$is_recid,pred_myscore_recid)
 roc.curve(myscore_test$is_recid,pred_myscore_recid)
