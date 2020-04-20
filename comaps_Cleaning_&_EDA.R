@@ -1,4 +1,3 @@
-# install.packages("RSQLite")
 # install.packages("blob")
 # install.packages("stargazer")
 # install.packages("ggplot2")
@@ -6,7 +5,6 @@
 #install.packages("ROCR")
 library(ROCR)
 library(stargazer)
-library(RSQLite)
 library(ggplot2)
 library(DataExplorer)
 library(lattice)
@@ -17,8 +15,8 @@ library(caret)
 
 #Linear Regression for the Compass Decile score prediction
 
-#setwd("C:/USF - BAIS/Anol/Compass Analysis")
-setwd("C://Users//praga//OneDrive//Desktop//COMPAS_Prof.Anol.B//")
+setwd("C:/USF - BAIS/Anol/Compass Analysis")
+#setwd("C://Users//praga//OneDrive//Desktop//COMPAS_Prof.Anol.B//")
 
 d <- read.csv("compas_with_drug_details.csv")
 attach(d)

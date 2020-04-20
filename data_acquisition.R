@@ -1,3 +1,7 @@
+install.packages("RSQLite")
+library(RSQLite)
+
+
 setwd("E:/Anol/Compass Analysis/COMPAS-Analysis")
 
 filename <- "compas.db"
