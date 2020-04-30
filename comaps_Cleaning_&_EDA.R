@@ -141,7 +141,7 @@ plot(m0_decile_all_interaction)
 #-------------------------------
 
 #Checking the effect of crime factors on decile score
-m0_decile_crime_factors = lm(log(decile_score) ~ juv_fel_count + juv_misd_count + priors_count + charge_degree_fact,d) #normality fails
+m0_decile_crime_factors = lm(log(decile_score) ~ juv_fel_count + juv_misd_count + priors_count + charge_degree_fact + as.factor(druginvolvment),d) #normality fails
 summary(m0_decile_crime_factors)
 plot(m0_decile_crime_factors)
 
@@ -159,7 +159,7 @@ summary(m0_decile_raceandsex)
 plot(m0_decile_raceandsex)
 
 stargazer(m0_decile_all,m0_decile_all_interaction,m0_decile_crime_factors,m0_decile_crime_factors_charge_degree,m0_decile_raceandsex,type = 'text')
-
+stargazer::stargazer(m0_decile_crime_factors, type= 'text')
 #Function to generate F1 score
 f1score <- function(x1,x2) {
   f1scorenum = 2*x1*x2/(x1+x2)
@@ -375,6 +375,19 @@ stargazer(m1_Vrecid_no_decile,m1_Vrecid_crime_factors,m1_Vrecid_decilescore,m1_V
 
 plot(m0_decile_crime_factors_charge_degree)
 
+#with drug involvment
+d$myscore = round(exp(m0_decile_crime_factors$coefficients[1]) 
+                  + exp(m0_decile_crime_factors$coefficients[2])*d$juv_fel_count 
+                  + exp(m0_decile_crime_factors$coefficients[3])*d$juv_misd_count 
+                  + exp(m0_decile_crime_factors$coefficients[4])*d$priors_count 
+                  + exp(m0_decile_crime_factors$coefficients[5])*as.numeric(d$charge_degree_fact)
+                  +exp(m0_decile_crime_factors$coefficients[6])*as.numeric(d$charge_degree_fact)
+                  +exp(m0_decile_crime_factors$coefficients[7])*as.numeric(d$charge_degree_fact)
+                  +exp(m0_decile_crime_factors$coefficients[8])*as.numeric(d$charge_degree_fact)
+                  +exp(m0_decile_crime_factors$coefficients[9])*as.numeric(d$charge_degree_fact)
+                  +exp(m0_decile_crime_factors$coefficients[10])*as.numeric(d$druginvolvment))
+
+
 
 d$myscore = round(exp(m0_decile_crime_factors_charge_degree$coefficients[1]) 
                   + exp(m0_decile_crime_factors_charge_degree$coefficients[2])*d$juv_fel_count 
@@ -385,7 +398,8 @@ d$myscore = round(exp(m0_decile_crime_factors_charge_degree$coefficients[1])
                   +exp(m0_decile_crime_factors_charge_degree$coefficients[7])*as.numeric(d$charge_degree_fact)
                   +exp(m0_decile_crime_factors_charge_degree$coefficients[8])*as.numeric(d$charge_degree_fact)
                   +exp(m0_decile_crime_factors_charge_degree$coefficients[9])*as.numeric(d$charge_degree_fact)
-                  +exp(m0_decile_crime_factors_charge_degree$coefficients[10])*as.numeric(d$age))
+                  +exp(m0_decile_crime_factors_charge_degree$coefficients[10])*as.numeric(d$druginvolvment))
+
 
 m1_recid_crime_factors = glm(is_recid ~ juv_fel_count + juv_misd_count + priors_count+charge_degree_fact+as.factor(druginvolvment) , family =binomial , data = train)
 summary(m1_recid_crime_factors)
@@ -439,17 +453,36 @@ hist(d$decile_score)
 c1 <- rgb(173,216,230,max = 255, alpha = 80, names = "lt.blue")
 c2 <- rgb(255,192,203, max = 255, alpha = 80, names = "lt.pink")
 
-hist(d$decile_score, col = c1, ylim = c(0,6500),main = NULL)
-hist(d$scaledmyscore, col = c2, add = TRUE)
-title("Histogram of Comaps-Decile score and My score")
-legend("topright", c("Decile Score", "My Score"), col=c(c1, c2), lwd=10)
+hist(d$scaledmyscore, col = c1, ylim = c(0,3000),main = NULL, breaks = 10, xlab = "Risk Score (1-10)")
+hist(d$decile_score, col = c2, add = TRUE, breaks = 10)
+title("Histogram of Fair score and Comaps-Decile score")
+legend("topright", c("Fair Score", "Decile Score"), col=c(c1, c2), lwd=10)
 
 
 d_africanamerica = subset(d, race == 'African-American', select = c('decile_score','myscore','scaledmyscore'))
-hist(d_africanamerica$decile_score, col= c2, ylim=c(0,3000), main = NULL)
-hist(d_africanamerica$scaledmyscore, col = c1, add =  TRUE)
-title(" Comparing decile scores for african-american race population ")
-legend("topright", c("My Score", "Decile Score"), col=c(c1, c2), lwd=10)
+hist(d_africanamerica$scaledmyscore, col= c1, ylim=c(0,1570), main = NULL, breaks = 10, xlab = "Risk Score (1-10)")
+hist(d_africanamerica$decile_score, col = c2, add =  TRUE, breaks = 10)
+title(" Comparing Fair and decile score for african-american population")
+legend("topright", c("Fair Score", "Decile Score"), col=c(c1, c2), lwd=10)
+
+
+d_caucasian = subset(d, race == 'Caucasian', select = c('decile_score','myscore','scaledmyscore'))
+hist(d_caucasian$scaledmyscore, col= c1, ylim=c(0,1270),xlim = c(1,10),main = NULL, breaks = 10, xlab = "Risk Score (1-10)")
+hist(d_caucasian$decile_score, col = c2, add =  TRUE, breaks = 10)
+title(" Comparing Fair and decile score for caucasian population")
+legend("topright", c("Fair Score", "Decile Score"), col=c(c1, c2), lwd=10)
+
+
+summary(d$scaledmyscore)
+summary(d_africanamerica$scaledmyscore)
+summary(d_caucasian$scaledmyscore)
+
+hist(d$scaledmyscore)
+
+summary(d$decile_score)
+summary(d_africanamerica$decile_score)
+summary(d_caucasian$decile_score)
+hist(d$decile_score)
 
 ##########################################################################################################
 
