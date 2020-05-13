@@ -16,11 +16,9 @@ library(caret)
 #Linear Regression for the Compass Decile score prediction
 
 setwd("C:/USF - BAIS/Anol/Compass Analysis")
-#setwd("C://Users//praga//OneDrive//Desktop//COMPAS_Prof.Anol.B//")
 
 d <- read.csv("compas_with_drug_details.csv")
 attach(d)
-
 dim(d)
 head(d)
 summary(d)
@@ -39,7 +37,6 @@ unwanted_cols = c('id','key','age_cat','dob','r_days_from_arrest','days_b_screen
 d = drop_columns(data = d, ind = unwanted_cols)
 
 #Data Manipulation
-
 d$race <- relevel(d$race, ref = "Caucasian") #Relevel the race to caucasian
 d$is_recid <- factor(d$is_recid,) #factorize the is_recid flag, 0 = NO , 1 = Yes
 d$is_violent_recid <- factor(d$is_violent_recid) #factorize is_voilent_recid flag, 0 = NO , 1 = Yes
@@ -64,11 +61,6 @@ test  <- d[-train.index,]
 
 table(train$is_recid,train$druginvolvment)
 table(test$is_recid, test$druginvolvment)
-
-hist(log(train$length_of_stay))
-summary(train$length_of_stay)
-boxplot(train$length_of_stay)
-IQR(train$length_of_stay)
 
 
 ############### Exploratory Analysis ##################
@@ -116,7 +108,6 @@ ggplot(data = d, aes(sort(charge_degree_fact, decreasing = TRUE))) +
 
 pairs(~age+decile_score+race+priors_count+juv_fel_count+juv_misd_count+score_text,data=d,main="Simple Scatterplot Matrix")
 
-
 #################################################################################################################################
 
 ###########################
@@ -130,7 +121,6 @@ pairs(~age+decile_score+race+priors_count+juv_fel_count+juv_misd_count+score_tex
 m0_decile_all = lm(log(decile_score) ~ age + juv_fel_count + juv_misd_count + sex + priors_count + race +charge_degree ,d)
 summary(m0_decile_all)
 plot(m0_decile_all)
-#class(d$charge_degree)
 #-------------------------------
 
 #Simple LR model with Race and Sex Interaction
@@ -145,12 +135,6 @@ m0_decile_crime_factors = lm(log(decile_score) ~ juv_fel_count + juv_misd_count 
 summary(m0_decile_crime_factors)
 plot(m0_decile_crime_factors)
 
-
-m0_decile_crime_factors_charge_degree = lm(log(decile_score) ~ juv_fel_count + juv_misd_count + priors_count,d) #normality fails
-summary(m0_decile_crime_factors_charge_degree)
-plot(m0_decile_crime_factors_charge_degree)
-m0_decile_crime_factors_charge_degree = lm(log(decile_score) ~ age+sex+race,d) #normality fails
-
 #------------------------------
 
 #Checking the effect of Race and Sex interaction term in predicting Decile score
@@ -160,12 +144,15 @@ plot(m0_decile_raceandsex)
 
 stargazer(m0_decile_all,m0_decile_all_interaction,m0_decile_crime_factors,m0_decile_crime_factors_charge_degree,m0_decile_raceandsex,type = 'text')
 stargazer::stargazer(m0_decile_crime_factors, type= 'text')
+
+#################################################################################################################
+
 #Function to generate F1 score
 f1score <- function(x1,x2) {
   f1scorenum = 2*x1*x2/(x1+x2)
   return(f1scorenum)
 }
-#################################################################################################################3
+#################################################################################################################
 
 #############################
 # Predicting the Recidivism #
@@ -193,6 +180,7 @@ plot(rocv1,colorize=T, main="Violent score ROC curve", ) #ROC
 aucv1=performance(pred1,"auc")
 aucv1=round(unlist(slot(aucv1,"y.values")),4)
 legend(0.6,0.3,aucv1,title = "AUC")
+
 #------------------------------
 
 #GLM model to predict recidivism using all the crime related factors 
@@ -388,60 +376,15 @@ d$myscore = round(exp(m0_decile_crime_factors$coefficients[1])
                   +exp(m0_decile_crime_factors$coefficients[10])*as.numeric(d$druginvolvment))
 
 
-
-d$myscore = round(exp(m0_decile_crime_factors_charge_degree$coefficients[1]) 
-                  + exp(m0_decile_crime_factors_charge_degree$coefficients[2])*d$juv_fel_count 
-                  + exp(m0_decile_crime_factors_charge_degree$coefficients[3])*d$juv_misd_count 
-                  + exp(m0_decile_crime_factors_charge_degree$coefficients[4])*d$priors_count 
-                  + exp(m0_decile_crime_factors_charge_degree$coefficients[5])*as.numeric(d$charge_degree_fact)
-                  +exp(m0_decile_crime_factors_charge_degree$coefficients[6])*as.numeric(d$charge_degree_fact)
-                  +exp(m0_decile_crime_factors_charge_degree$coefficients[7])*as.numeric(d$charge_degree_fact)
-                  +exp(m0_decile_crime_factors_charge_degree$coefficients[8])*as.numeric(d$charge_degree_fact)
-                  +exp(m0_decile_crime_factors_charge_degree$coefficients[9])*as.numeric(d$charge_degree_fact)
-                  +exp(m0_decile_crime_factors_charge_degree$coefficients[10])*as.numeric(d$druginvolvment))
-
-
-m1_recid_crime_factors = glm(is_recid ~ juv_fel_count + juv_misd_count + priors_count+charge_degree_fact+as.factor(druginvolvment) , family =binomial , data = train)
-summary(m1_recid_crime_factors)
-d$myscore = round(exp(m1_recid_crime_factors$coefficients[1]) 
-                  + exp(m1_recid_crime_factors$coefficients[2])*d$juv_fel_count 
-                  + exp(m1_recid_crime_factors$coefficients[3])*d$juv_misd_count 
-                  + exp(m1_recid_crime_factors$coefficients[4])*d$priors_count 
-                  + exp(m1_recid_crime_factors$coefficients[5])*as.numeric(d$charge_degree_fact)
-                  +exp(m1_recid_crime_factors$coefficients[6])*as.numeric(d$charge_degree_fact)
-                  +exp(m1_recid_crime_factors$coefficients[7])*as.numeric(d$charge_degree_fact)
-                  +exp(m1_recid_crime_factors$coefficients[8])*as.numeric(d$charge_degree_fact)
-                  +exp(m1_recid_crime_factors$coefficients[9])*as.numeric(d$charge_degree_fact)
-                  +exp(m1_recid_crime_factors$coefficients[10])*as.numeric(d$druginvolvment))
-
+#My score summary stats
 summary(d$myscore)
 summary(m1_recid_crime_factors)
 hist(d$myscore, breaks = 10)
 
-# m1_recid_crime_factors = glm(is_recid ~ age + sex + race, family =binomial , data = train)
-# summary(m1_recid_crime_factors)
-# plot(m1_recid_crime_factors)
-# 
-# d$myscore = round(exp(m1_recid_crime_factors$coefficients[1]) 
-#                   + exp(m1_recid_crime_factors$coefficients[2])*d$age 
-#                   + exp(m1_recid_crime_factors$coefficients[3])*as.numeric(d$sex )
-#                   + exp(m1_recid_crime_factors$coefficients[4])*as.numeric(d$race)
-#                   + exp(m1_recid_crime_factors$coefficients[5])*as.numeric(d$race )
-#                   + exp(m1_recid_crime_factors$coefficients[6])*as.numeric(d$race )
-#                   + exp(m1_recid_crime_factors$coefficients[7])*as.numeric(d$race)
-#                   + exp(m1_recid_crime_factors$coefficients[8])*as.numeric(d$race))
-
-
-# m0_decile_crime_factors_charge_degree = lm(log(decile_score) ~ juv_fel_count + juv_misd_count + priors_count,d) #normality fails
-# summary(m0_decile_crime_factors_charge_degree)
-# 
-# d$myscore = round(exp(m0_decile_crime_factors_charge_degree$coefficients[1]) 
-#                   + exp(m0_decile_crime_factors_charge_degree$coefficients[2])*d$juv_fel_count 
-#                   + exp(m0_decile_crime_factors_charge_degree$coefficients[3])*d$juv_misd_count 
-#                   + exp(m0_decile_crime_factors_charge_degree$coefficients[4])*d$priors_count )
-
-
+#scaling my score in the range of 1-10 so it can be compared with decile score
 d$scaledmyscore = round(rescale(d$myscore,to= c(1,10)))
+
+
 summary(d$scaledmyscore)
 hist(d$scaledmyscore)
 
@@ -501,6 +444,8 @@ d$score_diff_percent = ((((d$decile_score) - (d$scaledmyscore)) / mean(d$decile_
 summary(d$score_diff_percent)
 
 
+####################################################################################################
+
 #Checking if the new scaled my score is a good predictor of recidivism
 
 myscore_train.index = caret::createDataPartition(d$is_recid, p = 0.7, list = FALSE)
@@ -508,6 +453,7 @@ myscore_train = d[myscore_train.index,]
 myscore_test = d[-myscore_train.index,]
 
 table(myscore_test$is_recid)
+
 #GLM to test the myscore against recidivism
 
 myscore_recid = glm(is_recid ~ scaledmyscore, family = binomial, data = myscore_train)
@@ -570,25 +516,4 @@ percent_inflation/mean(d$decile_score)
 
 
 ###############################################
-
-install.packages("randomForest")
-library(randomForest)
-
-myscore_recid = randomForest(is_recid ~ scaledmyscore, family = binomial, data = myscore_train)
-decile_recid = randomForest(is_recid ~ decile_score, family = binomial, data = myscore_train)
-
-# Create a Random Forest model with default parametepre1=prediction(rf_pred_decil,myscore_test$is_recid)
-
-rf_decile <- randomForest(is_recid ~ decile_score, data = myscore_train, importance = TRUE)
-rf_myscore <- randomForest(is_recid ~ scaledmyscore, data = myscore_train, importance = TRUE)
-summary(rf_decile)
-
-rf_pred_decil <- as.double(predict(rf_decile,myscore_test, type = "response"))
-rf_pred_myscore <- as.double(predict(rf_myscore, myscore_test, type = 'response'))
-
-
-rf_pred_decil1 <- (predict(rf_decile,myscore_test, type = "response"))
-rf_pred_myscore1 <- (predict(rf_myscore, myscore_test, type = 'response'))
-
-plot(is_recid~juv_misd_count)
 
