@@ -1,4 +1,4 @@
-## Finding Racial Bias in Pre-trial Risk Assessments [In progress]
+## Finding Racial Bias in Pre-trial Risk Assessments
 
 ![](images/prison_inmate002.jpg)
 
