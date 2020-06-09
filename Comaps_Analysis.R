@@ -53,6 +53,7 @@ dim(d)
 #Removing oe record with c_jail_out date '1/1/2020'. This is an erroneous record as our analysis is based on data till April 2016. 
 d = d[!(d$c_jail_out=='1/1/2020 0:00' ),]
 
+
 #DATA SPLIT INTO TRAIN TEST
 set.seed(101)
 train.index <- caret::createDataPartition(d$is_recid, p = .7, list = FALSE)
@@ -68,6 +69,11 @@ table(test$is_recid, test$druginvolvment)
 #Correlation matrix
 cordf = cor(d[,unlist(lapply(d, is.numeric))])
 corrplot::corrplot(cordf)
+
+
+#Box plots
+ggplot(data = d, aes(x = race, y= decile_score, fill = race)) + geom_boxplot(outlier.colour="black",outlier.size=3)
+
 
 #ScatterPlots
 ggplot(data = d, aes(decile_score)) +
