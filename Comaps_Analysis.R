@@ -74,6 +74,33 @@ corrplot::corrplot(cordf)
 #Box plots
 ggplot(data = d, aes(x = race, y= decile_score, fill = race)) + geom_boxplot(outlier.colour="black",outlier.size=3)
 
+#The box plot shows the variance of decile score (Risk Score) for African american and Caucasian are different 
+#Calculating variance to double check
+
+var(decile_score[race=='African-American'])
+var(decile_score[race=='Caucasian'])
+var(decile_score[race=='Native American'])
+var(decile_score[race=='Hispanic'])
+var(decile_score[race=='Asian'])
+var(decile_score[race=='Other'])
+
+#leven's Test
+#H0 : Population variances are equal
+library(car)  
+leveneTest(decile_score~race)
+
+#So we can confidently say that the variances of these two population that to be tested are different
+
+
+#T-test for decile score mean comparison for african american and Caucasian races 
+
+
+#H0: There is not difference in the mean of decile score of the African american and caucasian population
+#Ha: The mean of African american population is greater than the caucasian population
+d_ttest = subset(d,race == 'African-American' | race == 'Caucasian')
+t.test(d_ttest$decile_score~d_ttest$race,alt="two.sided", var.eq = F, conf = 0.99)
+
+#So with this result we can be 99% confident that the population mean of decile score for these two races is different i.e. there is racial bias in the Risk score.
 
 #ScatterPlots
 ggplot(data = d, aes(decile_score)) +
@@ -379,7 +406,8 @@ d$myscore = round(exp(m0_decile_crime_factors$coefficients[1])
                   +exp(m0_decile_crime_factors$coefficients[7])*as.numeric(d$charge_degree_fact)
                   +exp(m0_decile_crime_factors$coefficients[8])*as.numeric(d$charge_degree_fact)
                   +exp(m0_decile_crime_factors$coefficients[9])*as.numeric(d$charge_degree_fact)
-                  +exp(m0_decile_crime_factors$coefficients[10])*as.numeric(d$druginvolvment))
+                  +exp(m0_decile_crime_factors$coefficients[10])*as.numeric(d$druginvolvment)
+                  )
 
 
 #My score summary stats
