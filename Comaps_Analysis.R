@@ -461,6 +461,19 @@ summary(d_africanamerica$decile_score)
 summary(d_caucasian$decile_score)
 hist(d$decile_score)
 
+
+
+
+#T-test for decile score mean comparison for african american and Caucasian races 
+
+
+#H0: There is not difference in the mean of decile score of the African american and caucasian population
+#Ha: The mean of African american population is greater than the caucasian population
+d_ttest_new= subset(d,race == 'African-American' | race == 'Caucasian')
+t.test(d_ttest_new$scaledmyscore~d_ttest_new$race,alt="two.sided", var.eq = F, conf = 0.95)
+
+# Since p value is just equal to 0.05, we can say the mean of new scores are almost equal. There is slight difference in the mean of populations of these scores
+
 ##########################################################################################################
 
 #Checking the records where decile score is same as fair score
