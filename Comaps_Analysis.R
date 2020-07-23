@@ -92,6 +92,16 @@ leveneTest(decile_score~race)
 #So we can confidently say that the variances of these two population that to be tested are different
 
 
+#Anova
+
+# Analysis of variance - Used to check if there is a statistical difference between means of groups 
+
+# Compute the analysis of variance
+res.aov <- aov(decile_score ~ race, data = d)
+# Summary of the analysis
+summary(res.aov)
+
+
 #T-test for decile score mean comparison for african american and Caucasian races 
 
 
@@ -101,6 +111,15 @@ d_ttest = subset(d,race == 'African-American' | race == 'Caucasian')
 t.test(d_ttest$decile_score~d_ttest$race,alt="two.sided", var.eq = F, conf = 0.99)
 
 #So with this result we can be 99% confident that the population mean of decile score for these two races is different i.e. there is racial bias in the Risk score.
+
+#Welch test
+install.packages("onewaytests")
+library(onewaytests)
+
+
+welch.test(decile_score~race, d, rate = 0, alpha = 0.05, na.rm = TRUE, verbose = TRUE)
+
+
 
 #ScatterPlots
 ggplot(data = d, aes(decile_score)) +
@@ -473,6 +492,14 @@ d_ttest_new= subset(d,race == 'African-American' | race == 'Caucasian')
 t.test(d_ttest_new$scaledmyscore~d_ttest_new$race,alt="two.sided", var.eq = F, conf = 0.95)
 
 # Since p value is just equal to 0.05, we can say the mean of new scores are almost equal. There is slight difference in the mean of populations of these scores
+
+
+#anova again
+# Compute the analysis of variance
+res.aov_new <- aov(scaledmyscore ~ race, data = d)
+# Summary of the analysis
+summary(res.aov_new)
+
 
 ##########################################################################################################
 
