@@ -54,16 +54,6 @@ dim(d)
 d = d[!(d$c_jail_out=='1/1/2020 0:00' ),]
 
 
-#DATA SPLIT INTO TRAIN TEST
-set.seed(101)
-train.index <- caret::createDataPartition(d$is_recid, p = .7, list = FALSE)
-train <- d[ train.index,]
-test  <- d[-train.index,]
-
-table(train$is_recid,train$druginvolvment)
-table(test$is_recid, test$druginvolvment)
-
-
 ############### Exploratory Analysis ##################
 
 #Correlation matrix
@@ -84,7 +74,7 @@ var(decile_score[race=='Hispanic'])
 var(decile_score[race=='Asian'])
 var(decile_score[race=='Other'])
 
-#leven's Test
+#############-leven's Test-###############
 #H0 : Population variances are equal
 library(car)  
 leveneTest(decile_score~race)
@@ -92,7 +82,7 @@ leveneTest(decile_score~race)
 #So we can confidently say that the variances of these two population that to be tested are different
 
 
-#Anova
+##############-Statistical Tests-###################
 
 # Analysis of variance - Used to check if there is a statistical difference between means of groups 
 
@@ -100,6 +90,9 @@ leveneTest(decile_score~race)
 res.aov <- aov(decile_score ~ race, data = d)
 # Summary of the analysis
 summary(res.aov)
+
+#TukeyHSD - for performing multiple pairwise-comparison between the means of groups.
+TukeyHSD(res.aov)
 
 
 #T-test for decile score mean comparison for african american and Caucasian races 
@@ -119,9 +112,8 @@ library(onewaytests)
 
 welch.test(decile_score~race, d, rate = 0, alpha = 0.05, na.rm = TRUE, verbose = TRUE)
 
-
-
 #ScatterPlots
+
 ggplot(data = d, aes(decile_score)) +
   geom_bar(aes(fill= d$race)) +
   ggtitle("Decile Score by Race") +
