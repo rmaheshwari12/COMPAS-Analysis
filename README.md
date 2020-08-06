@@ -4,7 +4,7 @@
 
 Racial Bias ? 21st Century !? The answe is *Yes* 
 
-You can refere to the full report I created [here]()
+You can refere to the full report I created [here](https://github.com/rmaheshwari12/COMPAS-Analysis/blob/master/Compas%20Analysis%20Report.pdf)
 
 [ProPublic](), an American non-profit newsroom based out of NewYork, presented a [story](https://www.propublica.org/article/machine-bias-risk-assessments-in-criminal-sentencing) and [analysis](https://www.propublica.org/article/how-we-analyzed-the-compas-recidivism-algorithm)  in May 2016 and claimed that *COMPAS* (Correctional Offender Management Profiling for Alternative Sanctions) generated ‘Risk Scores’ are which are used by judges for pre-trial release of an offender, are biased against African-American race group. For this study they looked at more than 10,000 criminal defendants in Broward County, Florida, and compared their predicted recidivism rates with the rate that actually occurred over a two-year period. To do so, they also collected data about public incarceration from the ‘Florida Department of Corrections’. By joining these two data sets with a defendant’s first name, last name and Date of birth ProPublica assessed about 11000 records.
 
